@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stock Portfolio Outperformance | Interactive Models</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#16263c;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1050px;margin:40px auto;padding:0 20px 60px}header{margin-bottom:28px}h1{font-size:clamp(28px,4vw,42px);line-height:1.15;margin:0 0 10px}h2{margin:0 0 8px;font-size:23px}p{line-height:1.6;color:#4c6076}section{background:#fff;border:1px solid #e0e7ef;border-radius:18px;box-shadow:0 9px 35px rgba(22,39,64,.05);padding:28px;margin-bottom:22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:20px}.control label{display:flex;justify-content:space-between;gap:12px;font-weight:650;margin-bottom:12px}.control output{font-variant-numeric:tabular-nums;color:#155e9d}input[type=range]{width:100%;accent-color:#1761ad;cursor:pointer}.result{border-radius:12px;background:#eaf3ff;padding:18px 20px;margin:22px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}.result strong{font-size:32px;color:#124f8c;font-variant-numeric:tabular-nums}.result span{font-weight:600}.chart{width:100%;display:block;height:auto;aspect-ratio:900/370}.axislabel{fill:#4d6178;font-size:13px}.gridline{stroke:#e6edf4;stroke-width:1}.line{fill:none;stroke:#1966b1;stroke-width:3.5;stroke-linecap:round}.dot{fill:#1966b1;stroke:white;stroke-width:2}table{border-collapse:collapse;width:100%;margin-top:16px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid #e6edf4}th{background:#f4f7fb}td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}.highlight td{background:#eef5fe;font-weight:700}.note{font-size:13px;color:#607188;margin:12px 0 0}.formula{padding:12px 15px;background:#f4f7fb;border-radius:10px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;color:#294866}footer{color:#64748b;font-size:13px;margin-top:24px}@media(max-width:640px){main{margin:22px auto}section{padding:18px}.controls{grid-template-columns:1fr;gap:17px}.result strong{font-size:28px}}
+</style>
+</head>
+<body><main>
+<header><h1>Probability of Outperforming the S&amp;P 500</h1><p>Interactive illustrations of how portfolio size and correlation affect the probability of outperformance under a joint normal model of individual stocks' <em>excess returns</em>.</p></header>
+<section aria-labelledby="ind-title"><h2 id="ind-title">1. Independent-stock probability calculator</h2><p>Assume equally weighted stocks with independent, identically distributed normal excess returns. Adjust the proportion of individual stocks that outperform and the number held.</p>
+<div class="controls"><div class="control"><label for="p1">Individual stock outperformance <output id="p1v">45%</output></label><input id="p1" type="range" min="20" max="80" step="1" value="45"></div><div class="control"><label for="n1">Number of stocks <output id="n1v">30</output></label><input id="n1" type="range" min="1" max="100" step="1" value="30"></div></div>
+<div class="result"><span>Probability portfolio outperforms</span><strong id="result1">—</strong></div>
+<svg class="chart" id="chart1" viewBox="0 0 900 370" role="img" aria-label="Probability of portfolio outperformance versus number of stocks"></svg>
+<div class="formula">P(outperform) = Φ(√n × Φ⁻¹(p))</div><p class="note">p = individual stock probability of outperforming; n = equal-weight portfolio size. The curve updates with p; the highlighted point shows your selected n.</p></section>
+<section aria-labelledby="corr-title"><h2 id="corr-title">2. How pairwise correlations change probability</h2><p>Assume all stocks have the same marginal normal excess-return distribution and the same pairwise <em>excess-return</em> correlation. Adjust the values to see how correlated stock performance changes portfolio outcomes.</p>
+<div class="controls"><div class="control"><label for="p2">Individual stock outperformance <output id="p2v">45%</output></label><input id="p2" type="range" min="20" max="80" step="1" value="45"></div><div class="control"><label for="n2">Number of stocks <output id="n2v">30</output></label><input id="n2" type="range" min="1" max="100" step="1" value="30"></div><div class="control"><label for="rho">Pairwise correlation <output id="rhov">0.10</output></label><input id="rho" type="range" min="0" max="0.80" step="0.01" value="0.10"></div></div>
+<div class="result"><span>Probability portfolio outperforms at selected correlation</span><strong id="result2">—</strong></div>
+<table aria-label="Probability comparison for different correlations"><thead><tr><th>Pairwise excess-return correlation</th><th>Portfolio outperformance probability</th></tr></thead><tbody id="correlationRows"></tbody></table>
+<div class="formula">P(outperform) = Φ(Φ⁻¹(p) / √[ρ + (1 − ρ)/n])</div>
+<p class="note">This model assumes a common correlation for every pair. It is not an estimate of the actual S&amp;P 500 covariance matrix, and it uses correlation of stock returns relative to the index, not correlation of raw stock returns.</p></section>
+<footer>Educational model, not an empirical forecast. Real stock excess returns are skewed, heteroskedastic, and have heterogeneous correlations. Also, the share of stocks outperforming alone does not determine portfolio outperformance without distributional assumptions.</footer>
+</main>
+<script>
+'use strict';
+// Accurate, dependency-free approximations for the normal CDF and its inverse.
+function erf(x){const sign=x<0?-1:1;const a=Math.abs(x),t=1/(1+0.3275911*a);return sign*(1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-a*a));}
+function normalCDF(z){return .5*(1+erf(z/Math.SQRT2));}
+function inverseCDF(p){let lo=-9,hi=9;for(let i=0;i<85;i++){const mid=(lo+hi)/2;if(normalCDF(mid)<p)lo=mid;else hi=mid;}return (lo+hi)/2;}
+function probability(p,n,rho){return 100*normalCDF(inverseCDF(p/100)/Math.sqrt(rho+(1-rho)/n));}
+const el=id=>document.getElementById(id), pct=x=>x.toFixed(1)+'%';
+function svgElement(name,attrs,text){const ns='http://www.w3.org/2000/svg';const node=document.createElementNS(ns,name);for(const [k,v] of Object.entries(attrs||{}))node.setAttribute(k,v);if(text!==undefined)node.textContent=text;return node;}
+function drawChart(p,n){const svg=el('chart1');svg.replaceChildren();const W=900,H=370,L=65,R=22,T=15,B=48,cw=W-L-R,ch=H-T-B;const X=k=>L+(k-1)/99*cw,Y=v=>T+(100-v)/100*ch;
+for(let value=0;value<=100;value+=20){svg.append(svgElement('line',{x1:L,y1:Y(value),x2:W-R,y2:Y(value),class:'gridline'}));svg.append(svgElement('text',{x:L-12,y:Y(value)+4,'text-anchor':'end',class:'axislabel'},value+'%'));}
+for(const value of [1,20,40,60,80,100])svg.append(svgElement('text',{x:X(value),y:H-20,'text-anchor':'middle',class:'axislabel'},String(value)));
+let d='';for(let k=1;k<=100;k++)d+=(k===1?'M':'L')+X(k).toFixed(2)+','+Y(probability(p,k,0)).toFixed(2)+' ';
+svg.append(svgElement('path',{d,class:'line'}));svg.append(svgElement('circle',{cx:X(n),cy:Y(probability(p,n,0)),r:6,class:'dot'}));svg.append(svgElement('text',{x:W/2,y:H-2,'text-anchor':'middle',class:'axislabel'},'Number of stocks'));}
+function update1(){const p=+el('p1').value,n=+el('n1').value;el('p1v').textContent=p+'%';el('n1v').textContent=n;el('result1').textContent=pct(probability(p,n,0));drawChart(p,n);}
+function update2(){const p=+el('p2').value,n=+el('n2').value,rho=+el('rho').value;el('p2v').textContent=p+'%';el('n2v').textContent=n;el('rhov').textContent=rho.toFixed(2);el('result2').textContent=pct(probability(p,n,rho));const rows=[['Zero correlation',0],['Selected correlation ('+rho.toFixed(2)+')',rho],['Perfect correlation',1]];const body=el('correlationRows');body.replaceChildren();rows.forEach(([name,r],i)=>{const tr=document.createElement('tr');if(i===1)tr.className='highlight';const a=document.createElement('td'),b=document.createElement('td');a.textContent=name;b.textContent=pct(probability(p,n,r));tr.append(a,b);body.append(tr);});}
+for(const id of ['p1','n1'])el(id).addEventListener('input',update1);for(const id of ['p2','n2','rho'])el(id).addEventListener('input',update2);update1();update2();
+</script></body></html>
